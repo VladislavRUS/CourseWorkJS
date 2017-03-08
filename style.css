@@ -1,0 +1,22 @@
+body {
+    padding: 1em 1em;
+}
+
+table {
+    margin-top: 10px;
+}
+
+td {
+    border: 1px solid black;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    font-size: 10px;
+    line-height: 20px;
+    font-weight: bolder;
+    color: white;
+    background-color: white;
+    user-select: none;
+    cursor: default;
+    overflow: hidden;
+}
