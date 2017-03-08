@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Course work</title>
+	<style type="text/css">
+		html, body, div, span, applet, object, iframe,
+		h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+		a, abbr, acronym, address, big, cite, code,
+		del, dfn, em, img, ins, kbd, q, s, samp,
+		small, strike, strong, sub, sup, tt, var,
+		b, u, i, center,
+		dl, dt, dd, ol, ul, li,
+		fieldset, form, label, legend,
+		table, caption, tbody, tfoot, thead, tr, th, td,
+		article, aside, canvas, details, embed, 
+		figure, figcaption, footer, header, hgroup, 
+		menu, nav, output, ruby, section, summary,
+		time, mark, audio, video {
+		    margin: 0;
+		    padding: 0;
+		    border: 0;
+		    font-size: 100%;
+		    font: inherit;
+		    vertical-align: baseline;
+		}
+		/* HTML5 display-role reset for older browsers */
+		article, aside, details, figcaption, figure, 
+		footer, header, hgroup, menu, nav, section {
+		    display: block;
+		}
+		body {
+		    line-height: 1;
+		}
+		ol, ul {
+		    list-style: none;
+		}
+		blockquote, q {
+		    quotes: none;
+		}
+		blockquote:before, blockquote:after,
+		q:before, q:after {
+		    content: '';
+		    content: none;
+		}
+		table {
+		    border-collapse: collapse;
+		    border-spacing: 0;
+		}
+	</style>
+	<style type="text/css">
+		table {
+			margin-top: 10px;
+			margin-left: 10px;
+		}
+
+		td {
+			border: 1px solid black;
+			width: 20px;
+			height: 20px;
+			text-align: center;
+			font-size: 10px;
+			line-height: 20px;
+			font-weight: bolder;
+			color: white;
+		}		
+	</style>
+</head>
+<body>
+<button onclick="fillRandom()">Fill random</button>
+<button onclick="findClusters()">Find clusters</button>
+<button onclick="markCells()">Mark cells</button>
+<button onclick="findPath()">Find path</button>
+<button onclick="makeClusters()">Make clusters</button>
+
+<table id="testTable"></table>
+<script>
+	var N = 30;
+
+	(function createTable() {
+		var table = document.getElementById('testTable');
+
+		for (var i = 0; i < N; i++) {
+			var tr = elm('tr');
+
+			for (var j = 0; j < N; j++) {
+				var td = elm('td');
+				td.id = i + ':' + j;
+				tr.appendChild(td);
+			}
+
+			testTable.appendChild(tr);
+		}
+	})();
+
+	function getElm(id) {
+		var elm = document.getElementById(id);
+		return elm;
+	}
+
+	function elm(type) {
+		return document.createElement(type);
+	}
+
+	function fillRandom() {
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+				getElm(i + ':' + j).style.backgroundColor = 'white';
+
+				var r = Math.random();
+				if (r > 0.7) {
+					getElm(i + ':' + j).style.backgroundColor = 'black';
+				}
+			}
+		}
+	}
+
+	function findClusters() {
+		var k = 0;
+		var watched = [];
+
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+				var td = getElm(i + ':' + j);
+				var color = td.style.backgroundColor;
+
+				watched.push(td);
+
+				if (color == 'black') {
+
+					var left = getLeft(i, j);
+					var top = getTop(i, j);
+
+					if (left == -1 && top == -1) {
+						td.setAttribute('cluster', k++);
+
+					} else if (left !== -1 && top !== -1) {
+						if (left < top) {
+							mergeClusters(i, j, left, top, watched);
+
+						} else {
+							mergeClusters(i, j, top, left, watched);
+						}
+					
+
+					} else if (left !== -1) {
+						td.setAttribute('cluster', left);
+
+					} else if(top !== -1) {
+						td.setAttribute('cluster', top);
+					} 
+				}
+			}
+		}
+
+		var colors = [];
+
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+				var td = getElm(i + ':' + j);
+
+				if (td.style.backgroundColor == 'black') {
+					var cNum = parseInt(td.getAttribute('cluster'));
+
+					if (!containsCnum(colors, cNum)) {
+						colors.push({cNum: cNum, color: getRandomColor()});
+					}
+				}
+			}
+		}
+
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+				var td = getElm(i + ':' + j);
+
+				if (td.style.backgroundColor == 'black') {
+					var cNum = parseInt(td.getAttribute('cluster'));
+
+					td.style.backgroundColor = getColorByCnum(colors, cNum);
+				}
+			}
+		}
+	}
+
+	function getColorByCnum(colors, cNum) {
+		for (var i = 0; i < colors.length; i++) {
+			if (colors[i].cNum == cNum) {
+				return colors[i].color;
+			}
+		}
+	}
+
+	function containsCnum(colors, cNum) {
+		for (var i = 0; i < colors.length; i++) {
+			if (colors[i].cNum == cNum) return true;
+		}
+
+		return false;
+	}
+
+	function mergeClusters(i, j, less, bigger, watched) {
+		getElm(i + ':' + j).setAttribute('cluster', less);
+
+		watched.forEach(function(td) {
+			var cNum = parseInt(td.getAttribute('cluster'));
+			
+			if (cNum == less || cNum == bigger) {
+				td.setAttribute('cluster', less);
+			}
+		});
+	}
+
+	function getLeft(i, j) {
+		var td = getElm(i + ':' + (j-1));
+
+		if (!td || (td.style.backgroundColor == 'white')) {
+			return -1;
+
+		} else {
+			return parseInt(td.getAttribute('cluster'));
+		}
+	}
+
+	function getTop(i, j) {
+		var td = getElm((i-1) + ':' + j);
+
+		if (!td || (td.style.backgroundColor == 'white')) {
+			return -1;
+
+		} else {
+			return parseInt(td.getAttribute('cluster'));
+		}
+	}
+
+	function getRandomColor() {
+	    var letters = '0123456789ABCDEF';
+	    var color = '#';
+	    for (var i = 0; i < 6; i++ ) {
+	        color += letters[Math.floor(Math.random() * 16)];
+	    }
+	    return color;
+	}
+
+	function getByIdx(idx) {
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+				var td = getElm(i + ':' + j);
+				if (idx === parseInt(attrVal(td, 'idx'))) {
+					return td;
+				}
+			}
+		}
+
+		throw new Error('No such index!');
+	}
+
+	function markCells() {
+		var start = new Date().getTime();
+		var tdArr = [];
+
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+				var td = getElm(i +':' + j);
+
+				if (td.style.backgroundColor !== 'white') {
+					td.innerHTML = tdArr.length;
+					td.setAttribute('idx', tdArr.length);
+					tdArr.push(attrVal(td, 'id'));
+				}
+			}
+		}
+
+		makeMatrix(tdArr);
+
+		var end = new Date().getTime();
+		console.log('Finished in: ' + (end - start));
+	}
+
+	function makeMatrix(arr) {
+		var matrix = [];
+		for (var i = 0; i < arr.length; i++) {
+			matrix[i] = new Array(arr.length);
+		}
+
+		for (var i = 0; i < arr.length; i++) {
+
+			var td = getElm(arr[i]);
+
+			var tdData = getPointData(td);
+
+			var left = getElm(tdData.i + ':' + (tdData.j - 1));
+			var top = getElm((tdData.i-1) + ':' + tdData.j);
+			var right = getElm(tdData.i + ':' + (tdData.j + 1));
+			var bottom = getElm((tdData.i+1) + ':' + tdData.j);
+
+			[left, top, right, bottom].forEach(function(n) {
+				if (n) {
+					var nData = getPointData(n);
+
+					if (n.style.backgroundColor !== 'white') {
+						if (attrVal(n, 'cluster') == attrVal(td, 'cluster')) {
+
+							matrix[tdData.idx][nData.idx] = 0.1;
+							matrix[nData.idx][tdData.idx] = 0.1;
+						}
+					}
+				}
+			});
+		}
+
+		for (var i = 0; i < arr.length; i++) {
+			var minDistance = Number.MAX_VALUE,
+				toIdx = -1;
+
+			var tdFirst = getElm(arr[i]);
+			var firstData = getPointData(tdFirst);
+
+			for (var j = 0; j < arr.length; j++) {
+				var tdSecond = getElm(arr[j]);
+
+				if (i !== j && attrVal(tdFirst, 'cluster') !== attrVal(tdSecond, 'cluster')) {
+
+					var secondData = getPointData(tdSecond);
+
+					var d;
+
+					if (attrVal(tdFirst, 'cluster') == attrVal(tdSecond, 'cluster')) {
+						d = 0.1;
+
+					} else {
+						d = getDistance(firstData, secondData);
+					}
+					
+
+					if (d < minDistance) {
+						minDistance = d;
+						toIdx = j;
+					}
+				}
+			}
+
+			matrix[i][toIdx] = minDistance;
+			matrix[toIdx][i] = minDistance;
+		}
+
+		//var from = parseInt(prompt('Откуда: '));
+		//var to = parseInt(prompt('Куда: '));
+
+		var path = dijkstra(matrix, 0, (arr.length-1));
+
+		path.forEach(function(idx) {
+			getElm(arr[idx]).style.backgroundColor = 'red';
+		});
+	}
+
+	function getNeighbours(td) {
+		var neighbours = [];
+
+		['up', 'right', 'down', 'left'].forEach(function(direction) {
+			var n = getNeighbour(td, direction);
+			if (n !== -1) {
+				neighbours.push(n);
+			}
+		});
+
+		return neighbours;
+	}
+
+	function getNeighbour(td, direction) {
+		var id = td.getAttribute('id');
+		var split = id.split(':');
+
+		var i = parseInt(split[0]);
+		var j = parseInt(split[1]);
+
+		var n;
+
+		switch(direction) {
+			case 'up': {
+				n = getElm((i-1) + ':' + j);
+				break;
+			}
+			case 'left': {
+				n = getElm(i + ':' + (j-1));
+				break;
+			}
+
+			case 'down': {
+				n = getElm((i+1) + ':' + j);
+				break;
+			}
+
+			case 'right': {
+				n = getElm(i + ':' + (j+1));
+				break;
+			}
+		}
+
+		if (n !== null && n !== undefined && n.style.backgroundColor !== 'white') {
+			return n;
+
+		} else {
+			return -1;
+		}
+	}
+
+	function makeClusters() {
+		var start = new Date().getTime();
+
+		var verteces = getVerteces();
+
+		var clusters = [];
+
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+				var td = getElm(i + ':' + j);
+
+				if (td.style.backgroundColor !== 'white') {
+					var cNum = parseInt(attrVal(td, 'cluster'));
+
+					if (!clusters.containsCluster(cNum)) {
+						var c = new Cluster(cNum);
+						c.points.push(td);
+
+						clusters.push(c);
+
+					} else {
+						var cluster = getCluster(clusters, cNum);
+						cluster.points.push(td);
+					}
+				}
+			}
+		}
+
+		var matrix = [];
+		for (var i = 0; i < verteces.length; i++) {
+			matrix[i] = new Array(verteces.length);
+		}
+
+		var aside = [];
+
+		for (var c = 0; c < clusters.length; c++) {
+			var cluster = clusters[c];
+
+			for (var i = 0; i < cluster.points.length; i++) {
+				var neighbours = getNeighbours(cluster.points[i]);
+
+				if (neighbours.length < 4) {
+					aside.push(cluster.points[i]);
+				}
+
+				neighbours.forEach(function(n) {
+					var firstIdx = parseInt(attrVal(cluster.points[i], 'vIdx'));
+					var secondIdx = parseInt(attrVal(n, 'vIdx'));
+
+					matrix[firstIdx][secondIdx] = 0.01;
+					matrix[secondIdx][firstIdx] = 0.01;
+				});
+			}
+		}
+
+
+
+		var end = new Date().getTime();
+		console.log('Finished in: ' + (end - start));
+
+		/*
+		for (var c = 0; c < clusters.length; c++) {
+			var firstCluster = clusters[c];
+
+			var firstClusterPoints = firstCluster.points;
+
+			for (var i = 0; i < firstClusterPoints.length; i++) {
+				var minDistance = Number.MAX_VALUE, 
+					minPoint;
+				
+				var first = getPointData(firstClusterPoints[i]);
+
+				for (var k = 0; k < clusters.length; k++) {
+					if (c !== k) {
+						var secondCluster = clusters[k];
+						var secondClusterPoints = secondCluster.points;
+
+						for (var j = 0; j < secondClusterPoints.length; j++) {
+							var second = getPointData(secondClusterPoints[j]);
+
+							var distance = getDistance(first, second);
+							
+							if (distance < minDistance) {
+								minDistance = distance;
+								minPoint = second;
+							}	
+						}
+					}
+				}
+				
+				matrix[first.idx][minPoint.idx] = minDistance;
+				matrix[minPoint.idx][first.idx] = minDistance;	
+			}
+		}
+
+		findPath(matrix, verteces);
+
+		*/
+
+	}
+
+	function getDistance(p1, p2) {
+		return Math.abs(p1.i - p2.i) + Math.abs(p1.j - p2.j);
+	}
+
+	function getPointData(p) {
+		return {
+			i: parseInt(attrVal(p, 'id').split(':')[0]),
+			j: parseInt(attrVal(p, 'id').split(':')[1]),
+			idx: parseInt(attrVal(p, 'idx'))
+		}
+	}
+
+	function getVerteces() {
+		var verteces = [];
+
+		for (var i = 0; i < N; i++) {
+			for (var j = 0; j < N; j++) {
+
+				var td = getElm(i + ':' + j);
+
+				if (td.style.backgroundColor !== 'white') {
+
+					var cNum = parseInt(td.getAttribute('cluster'));
+					td.setAttribute('vIdx', verteces.length);
+					verteces.push(new Vertex(i, j, cNum));
+				}
+			}
+		}
+
+		return verteces;
+	}
+
+	function getCluster(clusters, cNum) {
+		for (var i = 0; i < clusters.length; i++) {
+			if (clusters[i].cNum === cNum) {
+				return clusters[i];
+			}
+		}
+	}
+
+	Array.prototype.containsCluster = function(cNum) {
+		for (var i = 0; i < this.length; i++) {
+			if (this[i].cNum == cNum) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	function attrVal(el, what) {
+		return el.getAttribute(what);
+	}
+
+	function findPath(matrix, verteces) {
+		var from = parseInt(prompt('Откуда: '));
+		var to = parseInt(prompt('Куда: '));
+
+		var start = new Date().getTime();		
+		var path = dijkstra(matrix, from, to);
+		var end = new Date().getTime();
+
+		alert('Time spend: ' + (end - start));
+
+		path.forEach(function(vIdx) {
+			getElm(verteces[vIdx].id).style.backgroundColor = 'red';
+		});
+	}
+
+	function dijkstra(matrix, s, t) {
+		//Shortset path
+		var d = new Array(matrix.length);
+		var visited = new Array(matrix.length);
+		var p = new Array(matrix.length);
+
+		for (var i = 0; i < matrix.length; i++) {
+			d[i] = Number.MAX_VALUE;
+			visited[i] = false;
+		}
+
+		d[s] = 0;
+		p[s] = s;
+
+		for (var i = 0; i < matrix.length; i++) {
+			var v = null;
+
+			for (var j = 0; j < matrix.length; j++) {
+				if (!visited[j] && (v == null || d[j] < d[v])) {
+					v = j;
+				}
+			}
+
+			if (d[v] == Number.MAX_VALUE) {
+				break;
+			}
+
+			visited[v] = true;
+
+			for (var j = 0; j < matrix.length; j++) {
+				var edgeLen = matrix[v][j];
+
+				if (d[v] +  edgeLen < d[j]) {
+					d[j] = d[v]  + edgeLen;
+					p[j] = p[v] + ',' + j + ',';
+				}
+			}
+		}
+
+		var pathStr = p[t];
+
+		var path = pathStr.split(',');
+
+		return path.filter(function(el) {
+			return !isNaN(parseInt(el));
+
+		}).map(function(el) {
+			return parseInt(el);
+		});
+
+	}
+
+	function notVisitedExists(visited) {
+		for (var i = 0; i < visited.length; i++) {
+			if (visited[i] == false) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	function Vertex(i, j, cluster) {
+		this.i = i;
+		this.j = j;
+		this.id = i + ':' + j;
+		this.cluster = cluster;
+	}
+
+	function Cluster(cNum) {
+		this.cNum = cNum;
+		this.points = [];
+	}
+
+</script>
+</body>
+</html>
