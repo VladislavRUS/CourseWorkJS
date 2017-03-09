@@ -1,5 +1,5 @@
-var N = 40;
-var p = 0.7;
+var N = 30;
+var p = 0.5;
 var globalMatrix;
 var globalArr;
 var from = -1;
@@ -20,7 +20,7 @@ function resetColors() {
         for (var j = 0; j < N; j++) {
             var td = elm('td');
 
-            td.addEventListener('click', function() {
+            td.addEventListener('click', function () {
                 from = parseInt(attrVal(this, 'idx'));
                 this.style.transform = 'scale(1.5)';
             });
@@ -39,7 +39,7 @@ function resetColors() {
                     }
                 }
             });
-            td.addEventListener('mouseout', function() {
+            td.addEventListener('mouseout', function () {
                 if (attrVal(this, 'idx') !== from) {
                     this.style.transform = 'scale(1)';
                     this.style.borderRadius = '0';
@@ -76,6 +76,7 @@ function findClusters() {
     for (var i = 0; i < N; i++) {
         for (var j = 0; j < N; j++) {
             var td = getElm(i + ':' + j);
+
             var color = td.style.backgroundColor;
 
             watched.push(td);
@@ -195,6 +196,116 @@ function markCells() {
     console.log('Finished in: ' + (end - start));
 }
 
+function wave() {
+    var matrix = [];
+    for (var i = 0; i < N; i++) {
+        matrix[i] = new Array(N);
+    }
+
+    initFirstStage();
+
+    var phase = 0;
+
+    do {
+        var current = [];
+
+        for (var i = 0; i < N; i++) {
+            for (var j = 0; j < N; j++) {
+                var td = getElm(i + ':' + j);
+                var wavePhase = parseInt(attrVal(td, 'wavePhase'));
+
+                if (wavePhase == phase) {
+                    current.push(td);
+                }
+            }
+        }
+
+        phase++;
+
+        current.forEach(function(td) {
+            var tdData = getPointData(td);
+
+            var left = getElm(tdData.i + ':' + (tdData.j - 1));
+            var top = getElm((tdData.i - 1) + ':' + tdData.j);
+            var right = getElm(tdData.i + ':' + (tdData.j + 1));
+            var bottom = getElm((tdData.i + 1) + ':' + tdData.j);
+
+            [left, top, right, bottom].forEach(function(n) {
+                if (n) {
+
+                    var wPhase = attrVal(n, 'wavePhase');
+
+                    if (wPhase) {
+
+                    } else {
+
+                    }
+
+                    var cluster = parseInt(attrVal(n, 'cluster'));
+
+                    if (cluster) {
+                        markCluster(cluster, phase)
+
+                    } else {
+                        n.setAttribute('wavePhase', phase);
+                        n.innerHTML = phase;
+                    }
+                }
+            });
+        });
+    } while (!lastRowWaved());
+
+    for (var i = 0; i < N; i++) {
+        for (var j = 0; j < N; j++) {
+            var td = getElm(i + ':' + j);
+            td.style.color = 'black';
+        }
+    }
+}
+
+function markCluster(cluster, phase) {
+    for (var i = 0; i < N; i++) {
+        for (var j = 0; j < N; j++) {
+            var td = getElm(i + ':' + j);
+
+            var cNum = parseInt(attrVal(td, 'cluster'));
+
+            if (cNum === cluster) {
+                td.setAttribute('wavePhase', phase);
+                td.innerHTML = phase;
+            }
+        }
+    }
+}
+
+function lastRowWaved() {
+    for (var j = 0, i = N - 1; j < N; j++) {
+        var td = getElm(i + ':' + j);
+        var idx = attrVal(td, 'wavePhase');
+
+        if (idx) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function initFirstStage() {
+    for (var i = 0, j = 0; j < N; j++) {
+        var td = getElm(i + ':' + j);
+
+        var cNum = parseInt(attrVal(td, 'cluster'));
+
+        if (cNum) {
+            markCluster(cNum, 0);
+        } else {
+            td.setAttribute('wavePhase', 0);
+            td.innerHTML = 0;
+        }
+    }
+}
+
 function makeMatrix(arr) {
     var matrix = [];
     for (var i = 0; i < arr.length; i++) {
@@ -219,8 +330,8 @@ function makeMatrix(arr) {
                 if (n.style.backgroundColor !== 'white') {
                     if (attrVal(n, 'cluster') == attrVal(td, 'cluster')) {
 
-                        matrix[tdData.idx][nData.idx] = Number.MIN_VALUE;
-                        matrix[nData.idx][tdData.idx] = Number.MIN_VALUE;
+                        matrix[tdData.idx][nData.idx] = 0.001;
+                        matrix[nData.idx][tdData.idx] = 0.001;
                     }
                 }
             }
@@ -235,13 +346,9 @@ function makeMatrix(arr) {
             var second = getElm(arr[j]);
 
             if (i !== j && attrVal(first, 'cluster') !== attrVal(second, 'cluster')) {
-                var secondPointData = getPointData(second);
-
-                var distance = getDistance(firstPointData, secondPointData);
-
                 if (!matrix[i][j]) {
-                    matrix[i][j] = distance;
-                    matrix[j][i] = distance;
+                    matrix[i][j] = getDistance(firstPointData, getPointData(second));
+                    matrix[j][i] = matrix[i][j];
                 }
             }
         }
@@ -289,7 +396,7 @@ function dijkstra(matrix, s, t) {
         for (var j = 0; j < matrix.length; j++) {
             var edgeLen = matrix[v][j];
 
-            if (d[v] + edgeLen < d[j]) {
+            if (d[v] + edgeLen <= d[j]) {
                 d[j] = d[v] + edgeLen;
                 p[j] = p[v] + ',' + j + ',';
             }
